@@ -6,9 +6,13 @@ import Confetti from "react-confetti";
 
 interface FixtureRevealProps {
   isMobile: boolean;
+  onComplete?: () => void;
 }
 
-export default function FixtureReveal({ isMobile }: FixtureRevealProps) {
+export default function FixtureReveal({
+  isMobile,
+  onComplete,
+}: FixtureRevealProps) {
   const [hasFlipped, setHasFlipped] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [confettiOpacity, setConfettiOpacity] = useState(1);
@@ -24,6 +28,10 @@ export default function FixtureReveal({ isMobile }: FixtureRevealProps) {
       // Hide completely after fade-out
       setTimeout(() => {
         setShowConfetti(false);
+        // Call onComplete after the reveal is finished
+        if (onComplete) {
+          setTimeout(onComplete, 2000); // 2 second cooldown
+        }
       }, 5000);
     }, 3000);
 

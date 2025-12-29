@@ -1,18 +1,25 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import LogoReveal from "./LogoReveal";
 import FixtureReveal from "./FixtureReveal";
 
 export default function CeremonyWrapper() {
   const [phase, setPhase] = useState<
-    "initial" | "logo" | "logo-complete" | "fixture"
+    | "initial"
+    | "logo"
+    | "logo-complete"
+    | "fixture"
+    | "fixture-complete"
+    | "video"
   >("initial");
   const [isMobile, setIsMobile] = useState(false);
   const [particles, setParticles] = useState<
     Array<{ left: number; top: number; delay: number; duration: number }>
   >([]);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [audioLoaded, setAudioLoaded] = useState(false);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -35,7 +42,63 @@ export default function CeremonyWrapper() {
     setParticles(newParticles);
   }, [isMobile]);
 
+  // Preload audio on component mount
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const audio = new Audio("/clapping-sound-effects-sfx.mp3");
+      audio.preload = "auto";
+      audio.addEventListener("canplaythrough", () => {
+        console.log("Audio loaded successfully");
+        setAudioLoaded(true);
+      });
+      audio.addEventListener("error", (e) => {
+        console.error("Audio loading error:", e);
+      });
+      audioRef.current = audio;
+    }
+  }, []);
+
+  // Play clap sound using preloaded HTML5 Audio
+  const playClapSound = async () => {
+    console.log("Attempting to play clap sound, audioLoaded:", audioLoaded);
+    if (audioRef.current && audioLoaded) {
+      try {
+        audioRef.current.currentTime = 0; // Reset to beginning
+        await audioRef.current.play();
+        console.log("Audio played successfully");
+      } catch (e) {
+        console.log("Audio playback failed:", e);
+      }
+    } else {
+      console.log("Audio not ready:", {
+        audioRef: !!audioRef.current,
+        audioLoaded,
+      });
+    }
+  };
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  useEffect(() => {
+    // Generate particles only on client
+    const numParticles = isMobile ? 15 : 30;
+    const newParticles = Array.from({ length: numParticles }, () => ({
+      left: Math.random() * 100,
+      top: Math.random() * 100,
+      delay: Math.random() * 5,
+      duration: 5 + Math.random() * 5,
+    }));
+    setParticles(newParticles);
+  }, [isMobile]);
+
   const handleLogoReveal = () => {
+    playClapSound();
     setPhase("logo");
   };
 
@@ -44,7 +107,20 @@ export default function CeremonyWrapper() {
   };
 
   const handleFixtureReveal = () => {
+    playClapSound();
     setPhase("fixture");
+  };
+
+  const handleFixtureComplete = () => {
+    setPhase("fixture-complete");
+    // Auto-transition to video after cooldown
+    setTimeout(() => {
+      setPhase("video");
+    }, 4000); // 4 second cooldown
+  };
+
+  const handleVideoStart = () => {
+    setPhase("video");
   };
 
   return (
@@ -364,7 +440,102 @@ export default function CeremonyWrapper() {
             transition={{ duration: 0.8, ease: "easeOut" }}
             className="absolute inset-0 flex items-center justify-center"
           >
-            <FixtureReveal isMobile={isMobile} />
+            <FixtureReveal
+              isMobile={isMobile}
+              onComplete={handleFixtureComplete}
+            />
+          </motion.div>
+        )}
+
+        {phase === "fixture-complete" && (
+          <motion.div
+            key="fixture-complete"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.5 }}
+            className="absolute inset-0 flex items-center justify-center"
+          >
+            <div className="text-center space-y-8 px-4">
+              {/* Success message */}
+              <motion.div
+                initial={{ y: 30, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.2, duration: 0.8 }}
+                className="space-y-3"
+              >
+                <motion.div
+                  animate={{ scale: [1, 1.05, 1] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                  className="text-5xl"
+                >
+                  🏆
+                </motion.div>
+                <h2 className="text-3xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-green-400 via-emerald-400 to-green-400">
+                  Fixture Revealed
+                </h2>
+                <p className="text-gray-400 text-sm md:text-base">
+                  Get ready for the welcome video...
+                </p>
+              </motion.div>
+
+              {/* Loading animation */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.6, duration: 1 }}
+                className="flex justify-center gap-2 pt-4"
+              >
+                {[...Array(5)].map((_, i) => (
+                  <motion.div
+                    key={i}
+                    className="w-3 h-3 rounded-full bg-green-400/50"
+                    animate={{
+                      scale: [1, 1.5, 1],
+                      opacity: [0.5, 1, 0.5],
+                    }}
+                    transition={{
+                      duration: 1.5,
+                      repeat: Infinity,
+                      delay: i * 0.1,
+                    }}
+                  />
+                ))}
+              </motion.div>
+            </div>
+          </motion.div>
+        )}
+
+        {phase === "video" && (
+          <motion.div
+            key="video"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.8 }}
+            className="absolute inset-0 flex items-center justify-center"
+          >
+            <div className="w-full max-w-4xl px-4">
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.2, duration: 0.6 }}
+                className="relative"
+              >
+                <video
+                  src="/football-welcome.mp4"
+                  autoPlay
+                  className="w-full h-auto rounded-lg shadow-2xl border border-gray-700"
+                  style={{ maxHeight: "70vh" }}
+                  onEnded={() => {
+                    // Restart the ceremony
+                    setPhase("initial");
+                  }}
+                >
+                  Your browser does not support the video tag.
+                </video>
+              </motion.div>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
