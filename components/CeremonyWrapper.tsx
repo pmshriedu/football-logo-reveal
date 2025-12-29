@@ -525,6 +525,8 @@ export default function CeremonyWrapper() {
                 <video
                   src="/football-welcome.mp4"
                   autoPlay
+                  playsInline
+                  controls
                   className="w-full h-auto rounded-lg shadow-2xl border border-gray-700"
                   style={{ maxHeight: "70vh" }}
                   onEnded={() => {
