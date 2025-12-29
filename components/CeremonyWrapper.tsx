@@ -206,7 +206,7 @@ export default function CeremonyWrapper() {
                 className="space-y-2"
               >
                 <h1 className="text-2xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-400 to-blue-400 animate-gradient">
-                  All India Chief Minister Gold Cup
+                  11th All India Chief Minister’s Goldcup Football Tournament
                 </h1>
                 <h2 className="text-xl md:text-3xl font-semibold text-gray-300">
                   Official Logo Reveal
